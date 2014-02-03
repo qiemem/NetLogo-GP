@@ -6,23 +6,57 @@ to-report pick-random [ lst ]
   report item (random length lst) lst
 end
 
-to-report gen-for-type [ grammar return-type max-depth ]
-  if return-type = "command-block" [
-    report fput "command-block" gen-commands grammar 1 max-depth
+to-report join [ str lst ]
+  report reduce [(word ?1 str ?2)] lst
+end
+
+to-report split [ str substr ]
+  let i position substr str
+  ifelse i = false [
+    report (list str)
+  ] [
+    report fput (substring str 0 i) (split (substring str (i + 1) (length str)) substr)
   ]
-  let candidates filter [ return-type = first ? ] grammar
+end  
+
+to-report replace-all [ str substr1 substr2 ]
+  report join substr2 split str substr1
+end
+  
+to-report rule-name [ rule ]
+  report first rule
+end
+
+to-report rule-args [ rule ]
+  report item 1 rule
+end
+
+to-report rule-type [ rule ]
+  report item 2 rule
+end
+
+to-report rule-format [ rule ]
+  report last rule
+end
+
+to-report get-rule [ grammar name ]
+  report first filter [ name = rule-name ? ] grammar
+end
+
+to-report gen-for-type [ grammar return-type max-depth ]
+  let candidates filter [ return-type = rule-type ? ] grammar
   
   if max-depth <= 0 [
-    let remaining filter [ empty? item 2 ? ] candidates
+    let remaining filter [ empty? rule-args ? ] candidates
     if not empty? remaining [
-      report item 1 pick-random remaining
+      report rule-name pick-random remaining
     ]
   ]
-  let choice but-first pick-random candidates
-  ifelse empty? item 1 choice [
-    report first choice
+  let choice pick-random candidates
+  ifelse empty? rule-args choice [
+    report rule-name choice
   ] [
-    report (sentence (first choice) (map [ gen-for-type grammar ? (max-depth - 1) ] item 1 choice))
+    report (sentence rule-name choice (map [ gen-for-type grammar ? (max-depth - 1) ] rule-args choice))
   ]
 end
 
@@ -30,33 +64,63 @@ to-report gen-commands [ grammar n max-depth ]
   report n-values n [ gen-for-type grammar "" max-depth ]
 end
 
-to-report ast-to-code [ ast ]
+to-report ast-to-code [ grammar ast ]
   ifelse is-list? ast [
-    let children map ast-to-code ast
-    if is-list?  first ast [
-      report reduce [ (word ?1 "\n" ?2) ] children
-    ]
-    if first ast = "block" [
-      report (word "[\n" reduce [ (word ?1 "\n" ?2) ] but-first children "\n]")
-    ]
-    report (word "(" (reduce [ (word ?1 " " ?2) ] children) ")")
+    let children map [ ast-to-code grammar ? ] ast
+    let rule get-rule grammar first children
+    report run-format (rule-format rule) (first children) (but-first children)
   ] [
     report ast
   ]
 end
 
+to-report run-format [ format name args ]
+  let format-code (word format " \"" name "\" " map [ (word "\"" ? "\"") ] args)
+  report runresult replace-all format-code "\n" "\\n"
+end
+  
+
+to-report prefix [ name args ]
+  report (word "(" name " " join " " args ")")
+end
+
+to-report infix [ name args ]
+  report (word "(" first args " " name " " join " " but-first args ")")
+end
+
+to-report block [ name args ]
+  report (word "[ " join " " args " ]")
+end
+
+to-report blockln [ name args ]
+  report (word "[\n" join "\n" args "\n]")
+end
+
+to-report trans [ name args ]
+  report join " " args
+end
+
+to-report transln [ name args ]
+  report join "\n" args
+end
+
 to setup
   ca
   set sheep-grammar [
-    ["bool" "any? other turtles-here" []]
-    ["" "ifelse" ["bool" "command-block" "command-block"]]
-    ["number" 1 []]
-    ["angle" 90 []]
-    ["angle" -90 []]
-    ["" "forward" [ "number" ]]
-    ["" "back" [ "number" ]]
-    ["" "left" [ "angle" ]]
-    ["" "right" [ "angle" ]]
+    ["single-command" ["command"] "commands" "trans"]
+    ["multi-commands" ["command" "commands"] "commands" "transln"]
+    ["multi-command-block" ["commands"] "command-block" "blockln"]
+    ["single-command-block" ["command"] "command-block" "block"]
+    ["ifelse" ["bool" "command-block" "command-block"] "commands" "prefix"]
+    ["any? other turtles-here" [] "bool" "prefix"]
+    [1 [] "distance" "prefix"]
+    [90 [] "angle" "prefix"]
+    [-90 [] "angle" "prefix"]
+    ["forward" [ "distance" ] "command" "prefix"]
+    ["back" [ "distance" ] "command" "prefix"]
+    ["left" [ "angle" ] "command" "prefix"]
+    ["right" [ "angle" ] "command" "prefix"]
+    ["+" [ "distance" "distance" ] "distance" "infix" ]
   ]
 end
 
