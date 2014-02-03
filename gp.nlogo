@@ -72,6 +72,23 @@ to-report gen-for-type [ grammar return-type max-depth ]
   ]
 end
 
+to-report mutate [ grammar ast mut-rate ]
+  let name ifelse-value is-list? ast [ first ast ] [ ast ]
+  ifelse random-float 1 < mut-rate [
+    let return-type rule-type get-rule grammar name
+    report gen-for-type grammar return-type 1
+  ] [
+    ifelse is-list? ast [
+      let args but-first ast
+      report fput name map [ mutate grammar ? mut-rate ] args
+    ] [
+      report ast
+    ]
+  ]
+end
+      
+    
+
 to-report gen-commands [ grammar n max-depth ]
   report n-values n [ gen-for-type grammar "" max-depth ]
 end
@@ -172,7 +189,11 @@ to go
   ]
   ask n-of 5 patches with [ pcolor = red ] [ set pcolor black ]
   ask n-of 5 patches with [ pcolor = black ] [ set pcolor red ]
-  make-rats 100 - count turtles
+  repeat (100 - count turtles) [ breed-rat ]
+  if ticks mod 100 = 0 [
+    output-print (word "\nTick " ticks":")
+    output-print [ code ] of max-one-of turtles [ age ]
+  ]
   tick
 end
 
@@ -189,11 +210,23 @@ to make-rats [ n ]
     set heading 0
   ] 
 end
+
+to breed-rat
+  crt 1 [
+    move-to one-of patches with [ pcolor = black ]
+    let parent one-of other turtles
+    let parent-ast [ my-ast ] of parent
+    set my-ast mutate rat-grammar parent-ast mutation-rate
+    set code ast-to-code rat-grammar my-ast
+    set heading 0
+  ]
+end
+    
 @#$#@#$#@
 GRAPHICS-WINDOW
-309
+617
 10
-748
+1056
 470
 16
 16
@@ -218,10 +251,10 @@ ticks
 30.0
 
 BUTTON
-36
-115
-102
-148
+18
+29
+84
+62
 NIL
 setup
 NIL
@@ -235,10 +268,10 @@ NIL
 1
 
 BUTTON
-35
-193
-98
-226
+117
+27
+180
+60
 NIL
 go
 T
@@ -252,11 +285,30 @@ NIL
 1
 
 PLOT
-53
-298
-253
-448
-plot 1
+10
+123
+210
+273
+age
+NIL
+NIL
+0.0
+10.0
+0.0
+10.0
+true
+true
+"" ""
+PENS
+"max" 1.0 0 -16777216 true "" "plot max [ age ] of turtles"
+"mean" 1.0 0 -7500403 true "" "plot mean [ age ] of turtles"
+
+PLOT
+14
+303
+214
+453
+unique-genomes
 NIL
 NIL
 0.0
@@ -267,8 +319,29 @@ true
 false
 "" ""
 PENS
-"default" 1.0 0 -16777216 true "" "plot max [ age ] of turtles"
-"pen-1" 1.0 0 -7500403 true "" "plot mean [ age ] of turtles"
+"default" 1.0 0 -16777216 true "" "plot length remove-duplicates [ code ] of turtles"
+
+SLIDER
+16
+72
+188
+105
+mutation-rate
+mutation-rate
+0
+1
+0.01
+.005
+1
+NIL
+HORIZONTAL
+
+OUTPUT
+235
+70
+578
+395
+12
 
 @#$#@#$#@
 ## WHAT IS IT?
