@@ -76,7 +76,7 @@ to-report mutate [ grammar ast mut-rate ]
   let name ifelse-value is-list? ast [ first ast ] [ ast ]
   ifelse random-float 1 < mut-rate [
     let return-type rule-type get-rule grammar name
-    report gen-for-type grammar return-type 1
+    report gen-for-type grammar return-type 2
   ] [
     ifelse is-list? ast [
       let args but-first ast
@@ -165,10 +165,10 @@ to setup
     ["if" ["bool" "command-block"] "commands"]
     ["=" ["color" "color"] "bool" "infix"]
     ["red" [] "color"]
-    ;["black" [] "color"]
+    ["black" [] "color"]
     ["[pcolor] of" ["patch"] "color"]
     ["patch-ahead" ["distance"] "patch"]
-    ;["patch-here" [] "patch"]
+    ["patch-here" [] "patch"]
     ["single-command" ["command"] "commands" "trans"]
     ["multi-commands" ["command" "commands"] "commands" "transln"]
     ["multi-command-block" ["commands"] "command-block" "blockln"]
@@ -180,6 +180,8 @@ to setup
 end
 
 to go
+  ask n-of 5 patches with [ pcolor = red ] [ set pcolor black ]
+  ask n-of 5 patches with [ pcolor = black ] [ set pcolor red ]
   ask turtles [
     act
     set age age + 1
@@ -187,8 +189,6 @@ to go
       die
     ]
   ]
-  ask n-of 5 patches with [ pcolor = red ] [ set pcolor black ]
-  ask n-of 5 patches with [ pcolor = black ] [ set pcolor red ]
   repeat (100 - count turtles) [ breed-rat ]
   if ticks mod 100 = 0 [
     output-print (word "\nTick " ticks":")
