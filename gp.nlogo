@@ -1,5 +1,13 @@
+extensions [ profiler ]
+
 globals [
-  sheep-grammar
+  rat-grammar
+]
+
+turtles-own [
+  my-ast
+  code
+  age
 ]
 
 to-report pick-random [ lst ]
@@ -36,7 +44,11 @@ to-report rule-type [ rule ]
 end
 
 to-report rule-format [ rule ]
-  report last rule
+  ifelse length rule < 4 [
+    report "prefix"
+  ] [
+    report item 3 rule
+  ]
 end
 
 to-report get-rule [ grammar name ]
@@ -106,7 +118,12 @@ end
 
 to setup
   ca
-  set sheep-grammar [
+  let examples [
+    ["reporter-block bool" ["bool"] "reporter-block bool" "block"]
+    ["turtles" [] "turtle-set" "prefix"]
+    ["with" ["turtle-set" "reporter-block bool"] "turtle-set" "infix"]
+    ["other" ["turtle-set"] "turtle-set" "prefix"]
+    ["in-radius" ["turtle-set" "distance"] "turtle-set" "infix"]
     ["single-command" ["command"] "commands" "trans"]
     ["multi-commands" ["command" "commands"] "commands" "transln"]
     ["multi-command-block" ["commands"] "command-block" "blockln"]
@@ -122,32 +139,61 @@ to setup
     ["right" [ "angle" ] "command" "prefix"]
     ["+" [ "distance" "distance" ] "distance" "infix" ]
   ]
+  
+  set rat-grammar [
+    [90 [] "angle"]
+    [1 [] "distance"]
+    ["right" ["angle"] "command"]
+    ["left" ["angle"] "command"]
+    ["if" ["bool" "command-block"] "commands"]
+    ["=" ["color" "color"] "bool" "infix"]
+    ["red" [] "color"]
+    ;["black" [] "color"]
+    ["[pcolor] of" ["patch"] "color"]
+    ["patch-ahead" ["distance"] "patch"]
+    ;["patch-here" [] "patch"]
+    ["single-command" ["command"] "commands" "trans"]
+    ["multi-commands" ["command" "commands"] "commands" "transln"]
+    ["multi-command-block" ["commands"] "command-block" "blockln"]
+  ]
+  
+  ask n-of (count patches / 3) patches [ set pcolor red ]
+  make-rats 100
+  reset-ticks
 end
 
-to-report plus [ x y ]
-  report x + y
+to go
+  ask turtles [
+    act
+    set age age + 1
+    if pcolor = red [
+      die
+    ]
+  ]
+  ask n-of 5 patches with [ pcolor = red ] [ set pcolor black ]
+  ask n-of 5 patches with [ pcolor = black ] [ set pcolor red ]
+  make-rats 100 - count turtles
+  tick
 end
 
-to-report minus [ x y ]
-  report x - y
-end
+to act
+  run code
+  fd 1
+end  
 
-to-report times [ x y ]
-  report x * y
-end
-
-to-report divide [ x y ]
-  report x / y
-end
-
-to-report conditional [ cond then else ]
-  report ifelse-value cond [ then ] [ else ]
+to make-rats [ n ]
+  crt n [
+    move-to one-of patches with [ pcolor = black ]
+    set my-ast gen-for-type rat-grammar "commands" 3
+    set code ast-to-code rat-grammar my-ast
+    set heading 0
+  ] 
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
-210
+309
 10
-649
+748
 470
 16
 16
@@ -165,11 +211,64 @@ GRAPHICS-WINDOW
 16
 -16
 16
-0
-0
+1
+1
 1
 ticks
 30.0
+
+BUTTON
+36
+115
+102
+148
+NIL
+setup
+NIL
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
+
+BUTTON
+35
+193
+98
+226
+NIL
+go
+T
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
+
+PLOT
+53
+298
+253
+448
+plot 1
+NIL
+NIL
+0.0
+10.0
+0.0
+10.0
+true
+false
+"" ""
+PENS
+"default" 1.0 0 -16777216 true "" "plot max [ age ] of turtles"
+"pen-1" 1.0 0 -7500403 true "" "plot mean [ age ] of turtles"
 
 @#$#@#$#@
 ## WHAT IS IT?
