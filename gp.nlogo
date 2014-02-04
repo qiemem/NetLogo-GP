@@ -18,6 +18,10 @@ to-report join [ str lst ]
   report reduce [(word ?1 str ?2)] lst
 end
 
+to-report count-substr [ str substr ]
+  report (length str - length remove substr str) / length substr
+end
+
 to-report split [ str substr ]
   let i position substr str
   ifelse i = false [
@@ -101,6 +105,23 @@ to-report ast-to-code [ grammar ast ]
   ] [
     report ast
   ]
+end
+
+to-report prettify [ ugly-code ]
+  let lines split ugly-code "\n"
+  let result []
+  let indent 0
+  foreach lines [
+    let indent-change count-substr ? "[" - count-substr ? "]"
+    if indent-change < 0 [ set indent indent + indent-change ]
+    ifelse indent > 0 [
+      set result lput (word (reduce word n-values indent [ "  " ]) ?) result  
+    ] [
+      set result lput ? result
+    ]
+    if indent-change > 0 [ set indent indent + indent-change ]
+  ]
+  report join "\n" result
 end
 
 to-report run-format [ format name args ]
@@ -192,7 +213,7 @@ to go
   repeat (100 - count turtles) [ breed-rat ]
   if ticks mod 100 = 0 [
     output-print (word "\nTick " ticks":")
-    output-print [ code ] of max-one-of turtles [ age ]
+    output-print [ prettify code ] of max-one-of turtles [ age ]
   ]
   tick
 end
