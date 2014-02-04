@@ -204,22 +204,25 @@ end
 
 to make-rats [ n ]
   crt n [
-    move-to one-of patches with [ pcolor = black ]
     set my-ast gen-for-type rat-grammar "commands" 3
-    set code ast-to-code rat-grammar my-ast
-    set heading 0
+    init-rat
   ] 
 end
 
 to breed-rat
   crt 1 [
-    move-to one-of patches with [ pcolor = black ]
     let parent one-of other turtles
     let parent-ast [ my-ast ] of parent
     set my-ast mutate rat-grammar parent-ast mutation-rate
-    set code ast-to-code rat-grammar my-ast
-    set heading 0
+    init-rat
   ]
+end
+
+to init-rat
+  move-to one-of patches with [ pcolor = black ]
+  set code ast-to-code rat-grammar my-ast
+  set color 10 * (length code mod 14) + 5
+  set heading 0
 end
     
 @#$#@#$#@
