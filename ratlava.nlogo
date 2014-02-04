@@ -1,5 +1,7 @@
 extensions [ profiler ]
 
+__includes [ "gp.nls" ]
+
 globals [
   rat-grammar
 ]
@@ -9,150 +11,6 @@ turtles-own [
   code
   age
 ]
-
-to-report pick-random [ lst ]
-  report item (random length lst) lst
-end
-
-to-report join [ str lst ]
-  report reduce [(word ?1 str ?2)] lst
-end
-
-to-report count-substr [ str substr ]
-  report (length str - length remove substr str) / length substr
-end
-
-to-report split [ str substr ]
-  let i position substr str
-  ifelse i = false [
-    report (list str)
-  ] [
-    report fput (substring str 0 i) (split (substring str (i + 1) (length str)) substr)
-  ]
-end  
-
-to-report replace-all [ str substr1 substr2 ]
-  report join substr2 split str substr1
-end
-  
-to-report rule-name [ rule ]
-  report first rule
-end
-
-to-report rule-args [ rule ]
-  report item 1 rule
-end
-
-to-report rule-type [ rule ]
-  report item 2 rule
-end
-
-to-report rule-format [ rule ]
-  ifelse length rule < 4 [
-    report "prefix"
-  ] [
-    report item 3 rule
-  ]
-end
-
-to-report get-rule [ grammar name ]
-  report first filter [ name = rule-name ? ] grammar
-end
-
-to-report gen-for-type [ grammar return-type max-depth ]
-  let candidates filter [ return-type = rule-type ? ] grammar
-  
-  if max-depth <= 0 [
-    let remaining filter [ empty? rule-args ? ] candidates
-    if not empty? remaining [
-      report rule-name pick-random remaining
-    ]
-  ]
-  let choice pick-random candidates
-  ifelse empty? rule-args choice [
-    report rule-name choice
-  ] [
-    report (sentence rule-name choice (map [ gen-for-type grammar ? (max-depth - 1) ] rule-args choice))
-  ]
-end
-
-to-report mutate [ grammar ast mut-rate ]
-  let name ifelse-value is-list? ast [ first ast ] [ ast ]
-  ifelse random-float 1 < mut-rate [
-    let return-type rule-type get-rule grammar name
-    report gen-for-type grammar return-type 2
-  ] [
-    ifelse is-list? ast [
-      let args but-first ast
-      report fput name map [ mutate grammar ? mut-rate ] args
-    ] [
-      report ast
-    ]
-  ]
-end
-      
-    
-
-to-report gen-commands [ grammar n max-depth ]
-  report n-values n [ gen-for-type grammar "" max-depth ]
-end
-
-to-report ast-to-code [ grammar ast ]
-  ifelse is-list? ast [
-    let children map [ ast-to-code grammar ? ] ast
-    let rule get-rule grammar first children
-    report run-format (rule-format rule) (first children) (but-first children)
-  ] [
-    report ast
-  ]
-end
-
-to-report prettify [ ugly-code ]
-  let lines split ugly-code "\n"
-  let result []
-  let indent 0
-  foreach lines [
-    let indent-change count-substr ? "[" - count-substr ? "]"
-    if indent-change < 0 [ set indent indent + indent-change ]
-    ifelse indent > 0 [
-      set result lput (word (reduce word n-values indent [ "  " ]) ?) result  
-    ] [
-      set result lput ? result
-    ]
-    if indent-change > 0 [ set indent indent + indent-change ]
-  ]
-  report join "\n" result
-end
-
-to-report run-format [ format name args ]
-  let format-code (word format " \"" name "\" " map [ (word "\"" ? "\"") ] args)
-  report runresult replace-all format-code "\n" "\\n"
-end
-  
-
-to-report prefix [ name args ]
-  report (word "(" name " " join " " args ")")
-end
-
-to-report infix [ name args ]
-  report (word "(" first args " " name " " join " " but-first args ")")
-end
-
-to-report block [ name args ]
-  report (word "[ " join " " args " ]")
-end
-
-to-report blockln [ name args ]
-  report (word "[\n" join "\n" args "\n]")
-end
-
-to-report trans [ name args ]
-  report join " " args
-end
-
-to-report transln [ name args ]
-  report join "\n" args
-end
 
 to setup
   ca
@@ -275,10 +133,10 @@ ticks
 30.0
 
 BUTTON
-18
-29
-84
-62
+10
+10
+76
+43
 NIL
 setup
 NIL
@@ -292,10 +150,10 @@ NIL
 1
 
 BUTTON
-117
-27
-180
-60
+120
+10
+183
+43
 NIL
 go
 T
@@ -310,9 +168,9 @@ NIL
 
 PLOT
 10
-123
+90
 210
-273
+240
 age
 NIL
 NIL
@@ -321,17 +179,17 @@ NIL
 0.0
 10.0
 true
-true
+false
 "" ""
 PENS
 "max" 1.0 0 -16777216 true "" "plot max [ age ] of turtles"
 "mean" 1.0 0 -7500403 true "" "plot mean [ age ] of turtles"
 
 PLOT
-14
-303
-214
-453
+10
+250
+210
+400
 unique-genomes
 NIL
 NIL
@@ -346,26 +204,43 @@ PENS
 "default" 1.0 0 -16777216 true "" "plot length remove-duplicates [ code ] of turtles"
 
 SLIDER
-16
-72
-188
-105
+10
+50
+182
+83
 mutation-rate
 mutation-rate
 0
 1
-0.01
+0.0050
 .005
 1
 NIL
 HORIZONTAL
 
 OUTPUT
-235
-70
-578
-395
+220
+10
+610
+560
 12
+
+PLOT
+10
+410
+210
+560
+Species
+NIL
+NIL
+0.0
+10.0
+0.0
+10.0
+true
+false
+"foreach n-values 14 [ ? ] [\n  create-temporary-plot-pen (word ?)\n  set-plot-pen-color ? * 10 + 5\n]" "foreach n-values 14 [ ? ] [\n  set-current-plot-pen (word ?)\n  plot count turtles with [ length code mod 14 = ? ]\n]"
+PENS
 
 @#$#@#$#@
 ## WHAT IS IT?
@@ -728,5 +603,5 @@ Line -7500403 true 150 150 90 180
 Line -7500403 true 150 150 210 180
 
 @#$#@#$#@
-0
+1
 @#$#@#$#@
