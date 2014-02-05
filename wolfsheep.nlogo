@@ -1,8 +1,12 @@
 __includes [ "gp.nls" ]
 
+extensions [ profiler ]
+
 globals [
   sheep-grammar
   wolf-grammar
+  grass-color
+  dirt-color
 ]
 
 breed [ sheep a-sheep ]
@@ -11,13 +15,14 @@ breed [ wolves wolf ]
 turtles-own [
   genome
   code
+  proc
   energy
   moved?
 ]
 
 to setup
   ca
-  set sheep-grammar [
+  let base-grammar [
     ["single-command" ["command"] "commands" "trans"]
     ["multi-commands" ["command" "commands"] "commands" "transln"]
     ["multi-command-block" ["commands"] "command-block" "blockln"]
@@ -33,12 +38,6 @@ to setup
     ["walk" [] "command"]
     ["sprint" [] "command"]
     
-    ["eat-grass" [] "command"]
-    ["can-eat-patch?" ["patch"] "bool"]
-    
-    ["patch-ahead 1" [] "patch"]
-    ["patch-here" [] "patch"]
-    
     ["reproduce" [] "command"]
     
     ["energy" [] "number"]
@@ -46,14 +45,33 @@ to setup
     [50 [] "number"]
     [150 [] "number"]
     ["<" ["number" "number"] "bool" "infix"]
+    
+    [1 [] "distance"]
+    [2 [] "distance"]
+    
+    ["patch-here" [] "patch"]
+    ["patch-ahead" ["distance"] "patch"]
+    ["patch-left-and-ahead" ["angle" "distance"] "patch"]
+    ["patch-right-and-ahead" ["angle" "distance"] "patch"]
   ]
+  
+  set sheep-grammar (sentence base-grammar [
+    ["eat-grass" [] "command"]
+    ["can-eat-patch?" ["patch"] "bool"]
+    ["wolves-present?" ["patch"] "bool"]
+  ])
   
   let repro-seed [
     "if" ["<" 100 "energy"] [ "multi-command-block"
       ["single-command" "reproduce"]
     ]
   ]
+  
+  set grass-color 63
+  set dirt-color 32
+  
   set-default-shape sheep "sheep"
+  set-default-shape wolves "wolf"
   
   create-sheep 100 [
     setxy random-xcor random-ycor
@@ -61,38 +79,72 @@ to setup
     set genome gen-for-type sheep-grammar "commands" 0
     set genome (list "multi-commands" repro-seed genome)
     set code ast-to-code sheep-grammar genome
-    set moved? false
+    set proc compile code
     recolor
   ]
   
-  ask patches [ set pcolor brown ]
-  ask patches with [ random-float 1 < .5 ] [ set pcolor green ]
+  create-wolves 20 [
+    setxy random-xcor random-ycor
+    set color gray
+    set size 1.5
+  ]
+  
+  ask patches [ set pcolor dirt-color ]
+  ask patches with [ random-float 1 < .5 ] [ set pcolor grass-color ]
   reset-ticks
 end
 
 to go
   ask sheep [
-    run code
+    set moved? false
+    run proc
     set energy energy - 1
     if energy <= 0 [ die ]
-    set moved? false
   ]
-  ask patches with [ random-float 1 < .03 ] [ set pcolor green ]
+  if count wolves > num-wolves [
+    ask n-of (count wolves - num-wolves) wolves [ die ]
+  ]
+  
+  if count wolves < num-wolves [
+    create-wolves num-wolves - count wolves [
+      setxy random-xcor random-ycor
+      set color gray
+      set size 1.5
+    ]
+  ]
+      
+  ask wolves [
+    face min-one-of sheep [ distance myself ]
+    rt random 60
+    lt random 60
+    set moved? false
+    walk
+    ask sheep-here [ die ]
+  ]
+  ask patches with [ random-float 1 < .03 ] [ set pcolor grass-color ]
   tick
 end
 
 to recolor
-  set color 5 + 10 * (length code mod 14)
+  set color code-color code
+end
+
+to-report code-color [ source ]
+  report hsb (length source mod 255) 255 255
 end
 
 to-report can-eat-patch? [ p ]
-  report [pcolor] of p = green
+  report [pcolor] of p = grass-color
+end
+
+to-report wolves-present? [ p ]
+  report any? [ wolves-here ] of p
 end
 
 to eat-grass
   set energy energy - 1
-  if pcolor = green [
-    set pcolor brown
+  if pcolor = grass-color [
+    set pcolor dirt-color
     set energy energy + 20
   ]
 end
@@ -119,6 +171,7 @@ to reproduce
     hatch 1 [
       set genome mutate sheep-grammar [ genome ] of myself 0.01
       set code ast-to-code sheep-grammar genome
+      set proc compile code
       set heading random 360
       recolor
     ]
@@ -219,8 +272,23 @@ NIL
 10.0
 true
 false
-"foreach n-values 14 [ ? ] [\n  create-temporary-plot-pen (word ?)\n  set-plot-pen-color ? * 10 + 5\n]" "foreach n-values 14 [ ? ] [\n  set-current-plot-pen (word ?)\n  plot count sheep with [ length code mod 14 = ? ]\n]"
+"foreach n-values 255 [ ? ] [\n  create-temporary-plot-pen (word ?)\n  set-plot-pen-color (approximate-hsb ? 255 255)\n]" "foreach n-values 255 [ ? ] [\n  set-current-plot-pen (word ?)\n  plot count sheep with [ length code mod 255 = ? ]\n]"
 PENS
+
+SLIDER
+14
+124
+186
+157
+num-wolves
+num-wolves
+0
+50
+10
+1
+1
+NIL
+HORIZONTAL
 
 @#$#@#$#@
 ## WHAT IS IT?
