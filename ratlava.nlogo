@@ -9,33 +9,12 @@ globals [
 turtles-own [
   my-ast
   code
+  proc
   age
 ]
 
 to setup
   ca
-  let examples [
-    ["reporter-block bool" ["bool"] "reporter-block bool" "block"]
-    ["turtles" [] "turtle-set" "prefix"]
-    ["with" ["turtle-set" "reporter-block bool"] "turtle-set" "infix"]
-    ["other" ["turtle-set"] "turtle-set" "prefix"]
-    ["in-radius" ["turtle-set" "distance"] "turtle-set" "infix"]
-    ["single-command" ["command"] "commands" "trans"]
-    ["multi-commands" ["command" "commands"] "commands" "transln"]
-    ["multi-command-block" ["commands"] "command-block" "blockln"]
-    ["single-command-block" ["command"] "command-block" "block"]
-    ["ifelse" ["bool" "command-block" "command-block"] "commands" "prefix"]
-    ["any? other turtles-here" [] "bool" "prefix"]
-    [1 [] "distance" "prefix"]
-    [90 [] "angle" "prefix"]
-    [-90 [] "angle" "prefix"]
-    ["forward" [ "distance" ] "command" "prefix"]
-    ["back" [ "distance" ] "command" "prefix"]
-    ["left" [ "angle" ] "command" "prefix"]
-    ["right" [ "angle" ] "command" "prefix"]
-    ["+" [ "distance" "distance" ] "distance" "infix" ]
-  ]
-  
   set rat-grammar [
     [90 [] "angle"]
     [1 [] "distance"]
@@ -61,7 +40,7 @@ end
 to go
   ask n-of 5 patches with [ pcolor = red ] [ set pcolor black ]
   ask n-of 5 patches with [ pcolor = black ] [ set pcolor red ]
-  ask turtles [
+  ask turtles [ 
     act
     set age age + 1
     if pcolor = red [
@@ -77,7 +56,7 @@ to go
 end
 
 to act
-  run code
+  run proc
   fd 1
 end  
 
@@ -100,6 +79,7 @@ end
 to init-rat
   move-to one-of patches with [ pcolor = black ]
   set code ast-to-code rat-grammar my-ast
+  set proc compile code
   set color 10 * (length code mod 14) + 5
   set heading 0
 end

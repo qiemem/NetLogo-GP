@@ -49,7 +49,6 @@ end
 
 to-report gen-for-type [ grammar return-type max-depth ]
   let candidates filter [ return-type = rule-type ? ] grammar
-  
   if max-depth <= 0 [
     let remaining filter [ empty? rule-args ? ] candidates
     if not empty? remaining [
@@ -111,8 +110,12 @@ to-report prettify [ ugly-code ]
 end
 
 to-report run-format [ format name args ]
-  let format-code (word format " \"" name "\" " map [ (word "\"" ? "\"") ] args)
-  report runresult replace-all format-code "\n" "\\n"
+  let formatter compile (word format " ?1 ?2")
+  report (runresult formatter name args)
+end
+
+to-report compile [ source ]
+  report runresult (word "task [" source "]")
 end
   
 
@@ -139,7 +142,6 @@ end
 to-report transln [ name args ]
   report join "\n" args
 end
-
 
 to-report example-grammar
   report [
