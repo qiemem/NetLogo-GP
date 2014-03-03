@@ -1,299 +1,310 @@
-extensions [ ls table ]
+directed-link-breed [ phylo-links phylo-link ]
+undirected-link-breed [ convergent-links convergent-link ]
+breed [ species a-species ]
 
-__includes [ "gp.nls" ]
-
-globals [
-  rat-grammar
-  last-best
-  
-  birth
-  death
-  phylo-go
+species-own [
+  genome
+  population
+  reproductions
+  first-appearance
+  last-appearance
+  depth
 ]
 
-turtles-own [
-  my-ast
-  code
-  proc
-  age
-  species
+phylo-links-own [
+  occurrences
 ]
 
 to setup
   ca
-  if phylogenetic-tree? [
-    ls:reset
-    ls:load-gui-model (word ls:model-directory "phylogeny.nlogo")
-    ls:ask 0 "setup"
-    set birth ls:report 0 "task [ birth ?1 ?2 ]"
-    set death ls:report 0 "task [ death ? ]"
-    set phylo-go ls:report 0 "task [ go ]"
+  create-species 1 [
+    set genome ""
+    set first-appearance 0
+    set last-appearance 0
+    set population 0
   ]
-  set rat-grammar [
-    [90 [] "angle"]
-    [1 [] "distance"]
-    ["right" ["angle"] "command"]
-    ["left" ["angle"] "command"]
-    ["if" ["bool" "command-block"] "commands"]
-    ["=" ["color" "color"] "bool" "infix"]
-    ["red" [] "color"]
-    ["black" [] "color"]
-    ["[pcolor] of" ["patch"] "color"]
-    ["patch-ahead" ["distance"] "patch"]
-    ["patch-here" [] "patch"]
-    ["single-command" ["command"] "commands" "trans"]
-    ["right-commands" ["command" "commands"] "commands" "transln"]
-    ;["left-commands" ["commands" "command"] "commands" "transln"]
-    ["multi-command-block" ["commands"] "command-block" "blockln"]
-  ]
+  set-default-shape convergent-links "dashed"
   
-  ask n-of (count patches / 3) patches [ set pcolor red ]
-  make-rats 100
+  layout-xcor layout-ycor
   reset-ticks
 end
 
 to go
-  ask n-of 5 patches with [ pcolor = red ] [ set pcolor black ]
-  ask n-of 5 patches with [ pcolor = black ] [ set pcolor red ]
-  ask turtles [ 
-    act
-    set age age + 1
-    if pcolor = red [
-      (ls:ask 0 death species)
-      die
+  ask species [
+    ifelse population = 0 [
+      set shape "x"
+    ] [
+      set shape "circle"
     ]
+    let sizer runresult size-from
+    set size 2 * sizer / (10 + sizer) + .5
+    set color 10 * (length genome mod 14) + 5
+    set hidden? enforce-mins? and deadend?
   ]
-  repeat (100 - count turtles) [ breed-rat ]
-  let best [ code ] of max-one-of turtles [ age ]
-  if best != last-best [
-    output-print (word "\nTick " ticks":")
-    output-print prettify best
-    set last-best best
+  ask links [
+    set hidden? [ hidden? ] of end1 or [ hidden? ] of end2
   ]
-  if phylogenetic-tree? [
-    ls:ask 0 phylo-go
-    ls:display 0
+  ask convergent-links [
+    set hidden? hidden? or not show-convergence?
   ]
+  layout-xcor
+  layout-ycor
+  ask species with [ not hidden? ] [ set label (runresult label-from) ]
   tick
 end
 
-to act
-  run proc
-  fd 1
-end  
-
-to make-rats [ n ]
-  crt n [
-    set my-ast gen-for-type rat-grammar "commands" 3
-    init-rat
-    if phylogenetic-tree? [
-      set species (ls:report 0 "new-species ?" code)
-    ]
-  ] 
-end
-
-to breed-rat
-  crt 1 [
-    let parent one-of other turtles
-    let parent-ast [ my-ast ] of parent
-    set my-ast mutate rat-grammar parent-ast mutation-rate
-    init-rat
-    if phylogenetic-tree? [
-      set species (ls:report 0 birth [species] of parent code)
+to layout-xcor
+  ifelse xcor-from = "num-leaves" [
+    ask a-species 0 [ layout-tree min-pxcor max-pxcor ]
+  ] [
+    let max-value max [ runresult xcor-from ] of species with [ not hidden? ]
+    let min-value min [ runresult xcor-from ] of species with [ not hidden? ]
+    ask species with [ not hidden? ] [
+      let base-value runresult xcor-from
+      set xcor (base-value - min-value) / (1 + max-value - min-value) * (max-pxcor - min-pxcor) + min-pxcor
     ]
   ]
 end
 
-to init-rat
-  move-to one-of patches with [ pcolor = black ]
-  set code ast-to-code rat-grammar my-ast
-  set proc compile code
-  set color 10 * (length code mod 14) + 5
-  set heading 0
+to layout-ycor
+  let max-value max [ runresult ycor-from ] of species with [ not hidden? ]
+  let min-value min [ runresult ycor-from ] of species with [ not hidden? ]
+  ask species with [ not hidden? ] [
+    let base-value runresult ycor-from
+    set ycor (base-value - min-value) / (1 + max-value - min-value) * (max-pycor - min-pycor) + min-pycor
+  ]
 end
+
+to-report new-species [ species-genome ]
+  report birth 0 species-genome
+end
+
+to-report birth [ parent-species-id child-genome ]
+  let parent-species a-species parent-species-id
+  let parent-genome [ genome ] of parent-species
+  ifelse child-genome = parent-genome [
+    ask parent-species [
+      set population population + 1
+      set reproductions reproductions + 1
+      set last-appearance ticks
+    ]
+    report parent-species-id
+  ] [
+    let child-species [ out-link-neighbors with [ genome = child-genome ] ] of parent-species
+    ifelse not any? child-species [
+      create-species 1 [
+        set genome child-genome
+        create-convergent-links-with other species with [ genome = child-genome ]
+        set child-species self
+        create-phylo-link-from parent-species
+        set first-appearance ticks
+        set last-appearance ticks
+        set population 0
+        set depth [ depth ] of parent-species + 1
+      ]
+    ] [
+      set child-species one-of child-species
+    ]
+    ask child-species [ set population population + 1 ]
     
+    ask one-of [ my-in-phylo-links ] of child-species [
+      set occurrences occurrences + 1
+    ]
+    report [ who ] of child-species
+  ]
+end
+
+to death [ species-id ]
+  ask a-species species-id [
+    set population population - 1
+  ]
+end
+
+to layout-tree [ min-xcor max-xcor ]
+  set xcor (max-xcor - min-xcor) / 2 + min-xcor
+  let total-leaves num-leaves
+  let unit-width (max-xcor - min-xcor) / total-leaves
+  let child-min-xcor min-xcor
+  foreach sort out-phylo-link-neighbors with [ not hidden? ] [
+    ask ? [
+      let child-max-xcor child-min-xcor + unit-width * num-leaves
+      layout-tree child-min-xcor child-max-xcor
+      set child-min-xcor child-max-xcor
+    ]
+  ]
+end
+
+to-report num-leaves
+  let subcounts sum [ num-leaves ] of out-phylo-link-neighbors with [ not hidden? ]
+  ifelse subcounts = 0 [
+    report 1
+  ] [
+    report subcounts
+  ]
+end
+
+to-report deadend?
+  report (reproductions < min-reproductions or population < min-population) and all? out-phylo-link-neighbors [ deadend? ]
+end
+
+to show-genome
+  if mouse-down? [
+    every .5 [
+      ask min-one-of species with [ not hidden? ] [ distancexy mouse-xcor mouse-ycor ] [
+        output-print (word "Species " who)
+        output-print (word "Population: " population)
+        output-print (word "Reproductions: " reproductions)
+        output-print (word "First appearance: " first-appearance)
+        output-print (word "Last appearance: " last-appearance)
+        output-print genome
+        output-print ""
+      ]
+    ]
+  ]
+end
 @#$#@#$#@
 GRAPHICS-WINDOW
-617
+246
 10
-1056
-470
+891
+676
 16
-16
-13.0
+-1
+19.242424242424242
 1
 10
 1
 1
 1
 0
-1
-1
+0
+0
 1
 -16
 16
--16
-16
+0
+32
 1
 1
 1
 ticks
 30.0
 
-BUTTON
-10
-60
-76
-93
-NIL
-setup
-NIL
-1
-T
-OBSERVER
-NIL
-NIL
-NIL
-NIL
-1
+CHOOSER
+5
+105
+170
+150
+size-from
+size-from
+"population" "reproductions"
+0
 
-BUTTON
-120
-60
-183
-93
-NIL
-go
-T
-1
-T
-OBSERVER
-NIL
-NIL
-NIL
-NIL
-1
-
-PLOT
-10
-140
-210
-290
-age
-NIL
-NIL
-0.0
-10.0
-0.0
-10.0
-true
-false
-"" ""
-PENS
-"max" 1.0 0 -16777216 true "" "plot max [ age ] of turtles"
-"mean" 1.0 0 -7500403 true "" "plot mean [ age ] of turtles"
-
-PLOT
-10
-300
-210
-450
-unique-genomes
-NIL
-NIL
-0.0
-10.0
-0.0
-10.0
-true
-false
-"" ""
-PENS
-"default" 1.0 0 -16777216 true "" "plot length remove-duplicates [ code ] of turtles"
-
-SLIDER
-10
-100
-182
-133
-mutation-rate
-mutation-rate
+SWITCH
+5
+295
+175
+328
+enforce-mins?
+enforce-mins?
 0
 1
-0.0050
-.005
+-1000
+
+SWITCH
+5
+335
+175
+368
+show-convergence?
+show-convergence?
+1
+1
+-1000
+
+SLIDER
+5
+215
+175
+248
+min-reproductions
+min-reproductions
+0
+20
+3
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+5
+255
+175
+288
+min-population
+min-population
+0
+20
+0
+1
 1
 NIL
 HORIZONTAL
 
 OUTPUT
-220
-10
-610
-560
+5
+415
+245
+670
 12
 
-PLOT
-10
-460
-210
-610
-Species
+BUTTON
+65
+375
+187
+408
+NIL
+show-genome
+T
+1
+T
+OBSERVER
 NIL
 NIL
-0.0
-10.0
-0.0
-10.0
-true
-false
-"foreach n-values 14 [ ? ] [\n  create-temporary-plot-pen (word ?)\n  set-plot-pen-color ? * 10 + 5\n]" "foreach n-values 14 [ ? ] [\n  set-current-plot-pen (word ?)\n  plot count turtles with [ length code mod 14 = ? ]\n]"
-PENS
+NIL
+NIL
+1
 
-SWITCH
-20
-10
-192
-43
-phylogenetic-tree?
-phylogenetic-tree?
+CHOOSER
+5
+5
+157
+50
+xcor-from
+xcor-from
+"num-leaves" "who" "population" "reproductions" "first-appearance" "last-appearance"
 0
-1
--1000
 
-BUTTON
-660
-510
-767
-543
-NIL
-ls:hide 0
-NIL
-1
-T
-OBSERVER
-NIL
-NIL
-NIL
-NIL
-1
+CHOOSER
+5
+55
+157
+100
+ycor-from
+ycor-from
+"depth" "who" "population" "reproductions" "first-appearance" "last-appearance"
+0
 
-BUTTON
-845
-510
-957
-543
-NIL
-ls:show 0
-NIL
-1
-T
-OBSERVER
-NIL
-NIL
-NIL
-NIL
-1
+CHOOSER
+5
+155
+175
+200
+label-from
+label-from
+"\"\"" "population" "reproductions" "first-appearance" "last-appearance"
+0
 
 @#$#@#$#@
 ## WHAT IS IT?
@@ -648,6 +659,17 @@ default
 0.0
 -0.2 0 0.0 1.0
 0.0 1 1.0 0.0
+0.2 0 0.0 1.0
+link direction
+true
+0
+Line -7500403 true 150 150 90 180
+Line -7500403 true 150 150 210 180
+
+dashed
+0.0
+-0.2 0 0.0 1.0
+0.0 1 4.0 4.0
 0.2 0 0.0 1.0
 link direction
 true
