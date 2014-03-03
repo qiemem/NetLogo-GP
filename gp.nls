@@ -1,3 +1,5 @@
+globals [ formatters ]
+
 to-report pick-random [ lst ]
   report item (random length lst) lst
 end
@@ -110,8 +112,17 @@ to-report prettify [ ugly-code ]
 end
 
 to-report run-format [ format name args ]
-  let formatter compile (word format " ?1 ?2")
-  report (runresult formatter name args)
+  report (runresult (get-formatter format) name args)
+end
+
+to-report get-formatter [ proc-name ]
+  if formatters = 0 [
+    set formatters table:make
+  ]
+  if not table:has-key? formatters proc-name [
+    table:put formatters proc-name compile (word proc-name " ?1 ?2")
+  ]
+  report table:get formatters proc-name
 end
 
 to-report compile [ source ]
