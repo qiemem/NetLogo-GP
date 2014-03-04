@@ -20,6 +20,7 @@ phylo-links-own [
 
 to setup
   ca
+  set-default-shape species "circle"
   create-species 1 [
     set genome ""
     set first-appearance 0
@@ -31,6 +32,10 @@ to setup
 end
 
 to go
+  tick
+end
+
+to layout
   ask species [
     ifelse population = 0 [
       set shape "x"
@@ -40,36 +45,21 @@ to go
     let sizer runresult size-from
     set size 2 * sizer / (10 + sizer) + .5
     set color 10 * (length genome mod 14) + 5
-    set hidden? enforce-mins? and deadend?
   ]
+  ask species with [ not hidden? ] [ set label (runresult label-from) ]
+  ask species [ set hidden? enforce-mins? and deadend? ]
   ask links [
     set hidden? [ hidden? ] of end1 or [ hidden? ] of end2
   ]
   ask convergent-links [
     set hidden? hidden? or not show-convergence?
   ]
-  if any? active-species [ layout ]
+  if any? active-species [ reposition ]
   ask species with [ hidden? ] [ if any? in-phylo-link-neighbors [ move-to one-of in-phylo-link-neighbors ] ]
-  ask species with [ not hidden? ] [ set label (runresult label-from) ]
-  tick
+  display
 end
 
-to-report active-species
-  report species with [ not hidden? ]
-end
-
-to set-base-positions [ from var ]
-  let set-task runresult (word "task [ set " var " ? ]")
-  ifelse from = "num-leaves" [
-    ask a-species 0 [ layout-tree set-task 0 1 ]
-  ] [
-    ask active-species [
-      (run set-task runresult from)
-    ]
-  ]
-end
-
-to layout
+to reposition
   set-base-positions xcor-from "x"
   set-base-positions ycor-from "y"
   let min-x min [ x ] of active-species
@@ -98,6 +88,21 @@ to layout
     let py-width max-pycor - min-pycor - 1
     ask active-species [
       go-towards ((x - min-x) / x-width * px-width + min-pxcor) ((y - min-y) / y-width * py-width + min-pycor)
+    ]
+  ]
+end
+
+to-report active-species
+  report species with [ not hidden? ]
+end
+
+to set-base-positions [ from var ]
+  let set-task runresult (word "task [ set " var " ? ]")
+  ifelse from = "num-leaves" [
+    ask a-species 0 [ layout-tree set-task 0 1 ]
+  ] [
+    ask active-species [
+      (run set-task runresult from)
     ]
   ]
 end
@@ -364,6 +369,23 @@ smooth-transitions?
 0
 1
 -1000
+
+BUTTON
+230
+20
+297
+53
+NIL
+layout
+T
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
 
 @#$#@#$#@
 ## WHAT IS IT?
