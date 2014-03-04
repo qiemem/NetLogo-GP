@@ -9,6 +9,9 @@ species-own [
   first-appearance
   last-appearance
   depth
+  
+  x
+  y
 ]
 
 phylo-links-own [
@@ -24,8 +27,6 @@ to setup
     set population 0
   ]
   set-default-shape convergent-links "dashed"
-  
-  layout-xcor layout-ycor
   reset-ticks
 end
 
@@ -47,31 +48,58 @@ to go
   ask convergent-links [
     set hidden? hidden? or not show-convergence?
   ]
-  layout-xcor
-  layout-ycor
+  if any? active-species [ layout ]
   ask species with [ not hidden? ] [ set label (runresult label-from) ]
   tick
 end
 
-to layout-xcor
-  ifelse xcor-from = "num-leaves" [
-    ask a-species 0 [ layout-tree min-pxcor max-pxcor ]
+to-report active-species
+  report species with [ not hidden? ]
+end
+
+to set-base-positions [ from var ]
+  let set-task runresult (word "task [ set " var " ? ]")
+  ifelse from = "num-leaves" [
+    ask a-species 0 [ layout-tree set-task 0 1 ]
   ] [
-    let max-value max [ runresult xcor-from ] of species with [ not hidden? ]
-    let min-value min [ runresult xcor-from ] of species with [ not hidden? ]
-    ask species with [ not hidden? ] [
-      let base-value runresult xcor-from
-      set xcor (base-value - min-value) / (1 + max-value - min-value) * (max-pxcor - min-pxcor) + min-pxcor
+    ask active-species [
+      (run set-task runresult from)
     ]
   ]
 end
 
-to layout-ycor
-  let max-value max [ runresult ycor-from ] of species with [ not hidden? ]
-  let min-value min [ runresult ycor-from ] of species with [ not hidden? ]
-  ask species with [ not hidden? ] [
-    let base-value runresult ycor-from
-    set ycor (base-value - min-value) / (1 + max-value - min-value) * (max-pycor - min-pycor) + min-pycor
+to layout
+  set-base-positions xcor-from "x"
+  set-base-positions ycor-from "y"
+  let min-x min [ x ] of active-species
+  let max-x max [ x ] of active-species
+  let x-width max-x - min-x
+  if x-width = 0 [ set x-width 1 ]
+  let min-y min [ y ] of active-species
+  let max-y max [ y ] of active-species
+  let y-width max-y - min-y
+  if y-width = 0 [ set y-width 1 ]
+
+  
+  ifelse polar? [
+    let max-r max-pxcor - 1
+    let xs sort remove-duplicates [ x ] of active-species
+    let x-gap mean n-values (length xs - 1) [ (item (? + 1) xs) - (item ? xs) ]
+    set x-width x-width + x-gap
+    ask active-species [
+      let angle (x - min-x) / x-width * 359
+      let r (y - min-y) / y-width * max-r
+      
+      set xcor r * cos angle
+      set ycor r * sin angle
+    ]
+  ] [
+    let px-width max-pxcor - min-pxcor - 1
+    let py-width max-pycor - min-pycor - 1
+    ask active-species [
+      set xcor (x - min-x) / x-width * px-width + min-pxcor
+      set ycor (y - min-y) / y-width * py-width + min-pycor
+    ]
   ]
 end
 
@@ -120,15 +148,15 @@ to death [ species-id ]
   ]
 end
 
-to layout-tree [ min-xcor max-xcor ]
-  set xcor (max-xcor - min-xcor) / 2 + min-xcor
+to layout-tree [ set-task min-xcor max-xcor ]
+  (run set-task (max-xcor - min-xcor) / 2 + min-xcor)
   let total-leaves num-leaves
   let unit-width (max-xcor - min-xcor) / total-leaves
   let child-min-xcor min-xcor
   foreach sort out-phylo-link-neighbors with [ not hidden? ] [
     ask ? [
       let child-max-xcor child-min-xcor + unit-width * num-leaves
-      layout-tree child-min-xcor child-max-xcor
+      layout-tree set-task child-min-xcor child-max-xcor
       set child-min-xcor child-max-xcor
     ]
   ]
@@ -164,12 +192,12 @@ to show-genome
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
-246
+380
 10
-891
+1025
 676
 16
--1
+16
 19.242424242424242
 1
 10
@@ -182,8 +210,8 @@ GRAPHICS-WINDOW
 1
 -16
 16
-0
-32
+-16
+16
 1
 1
 1
@@ -192,9 +220,9 @@ ticks
 
 CHOOSER
 5
-105
-170
-150
+10
+175
+55
 size-from
 size-from
 "population" "reproductions"
@@ -202,9 +230,9 @@ size-from
 
 SWITCH
 5
-295
+200
 175
-328
+233
 enforce-mins?
 enforce-mins?
 0
@@ -213,9 +241,9 @@ enforce-mins?
 
 SWITCH
 5
-335
+240
 175
-368
+273
 show-convergence?
 show-convergence?
 1
@@ -224,9 +252,9 @@ show-convergence?
 
 SLIDER
 5
-215
+120
 175
-248
+153
 min-reproductions
 min-reproductions
 0
@@ -239,9 +267,9 @@ HORIZONTAL
 
 SLIDER
 5
-255
+160
 175
-288
+193
 min-population
 min-population
 0
@@ -253,17 +281,17 @@ NIL
 HORIZONTAL
 
 OUTPUT
-5
-415
-245
-670
+10
+325
+370
+675
 12
 
 BUTTON
-65
-375
-187
-408
+110
+280
+232
+313
 NIL
 show-genome
 T
@@ -277,34 +305,45 @@ NIL
 1
 
 CHOOSER
-5
-5
-157
-50
+635
+680
+787
+725
 xcor-from
 xcor-from
-"num-leaves" "who" "population" "reproductions" "first-appearance" "last-appearance"
+"num-leaves" "depth" "who" "population" "reproductions" "first-appearance" "last-appearance"
 0
 
 CHOOSER
-5
-55
-157
-100
+220
+170
+372
+215
 ycor-from
 ycor-from
-"depth" "who" "population" "reproductions" "first-appearance" "last-appearance"
-0
+"num-leaves" "depth" "who" "population" "reproductions" "first-appearance" "last-appearance"
+1
 
 CHOOSER
 5
-155
+60
 175
-200
+105
 label-from
 label-from
 "\"\"" "population" "reproductions" "first-appearance" "last-appearance"
 0
+
+SWITCH
+280
+120
+370
+153
+polar?
+polar?
+0
+1
+-1000
 
 @#$#@#$#@
 ## WHAT IS IT?
