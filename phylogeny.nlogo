@@ -49,6 +49,7 @@ to go
     set hidden? hidden? or not show-convergence?
   ]
   if any? active-species [ layout ]
+  ask species with [ hidden? ] [ if any? in-phylo-link-neighbors [ move-to one-of in-phylo-link-neighbors ] ]
   ask species with [ not hidden? ] [ set label (runresult label-from) ]
   tick
 end
@@ -90,16 +91,23 @@ to layout
       let angle (x - min-x) / x-width * 359
       let r (y - min-y) / y-width * max-r
       
-      set xcor r * cos angle
-      set ycor r * sin angle
+      go-towards (r * cos angle) (r * sin angle)
     ]
   ] [
     let px-width max-pxcor - min-pxcor - 1
     let py-width max-pycor - min-pycor - 1
     ask active-species [
-      set xcor (x - min-x) / x-width * px-width + min-pxcor
-      set ycor (y - min-y) / y-width * py-width + min-pycor
+      go-towards ((x - min-x) / x-width * px-width + min-pxcor) ((y - min-y) / y-width * py-width + min-pycor)
     ]
+  ]
+end
+
+to go-towards [ target-x target-y ]
+  ifelse smooth-transitions? [
+    facexy target-x target-y
+    fd (distancexy target-x target-y) / 10
+  ] [
+    setxy target-x target-y
   ]
 end
 
@@ -129,6 +137,7 @@ to-report birth [ parent-species-id child-genome ]
         set last-appearance ticks
         set population 0
         set depth [ depth ] of parent-species + 1
+        move-to parent-species
       ]
     ] [
       set child-species one-of child-species
@@ -341,6 +350,17 @@ SWITCH
 153
 polar?
 polar?
+0
+1
+-1000
+
+SWITCH
+190
+65
+372
+98
+smooth-transitions?
+smooth-transitions?
 0
 1
 -1000
