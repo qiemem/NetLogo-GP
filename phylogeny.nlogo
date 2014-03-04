@@ -1,3 +1,12 @@
+extensions [ profiler ]
+
+globals [
+  x-task
+  y-task
+  size-task
+  label-task
+]
+
 directed-link-breed [ phylo-links phylo-link ]
 undirected-link-breed [ convergent-links convergent-link ]
 breed [ species a-species ]
@@ -36,32 +45,52 @@ to go
 end
 
 to layout
-  ask species [
+  set x-task compile-from xcor-from
+  set y-task compile-from ycor-from
+  set size-task compile-from size-from
+  set label-task compile-from label-from
+  
+  ask a-species 0 [ set-visibility ]
+  ask links [ set hidden? any? both-ends with [ hidden? ] ]
+  ask convergent-links [ set hidden? not show-convergence? or hidden? ]
+  
+  if any? active-species [ set-base-positions size-task "size" ]
+  ask active-species [
+    ifelse passes-filters? [
+      set size .5 + size
+      set label runresult label-task
+    ][
+      set size 0
+      set label ""
+    ]
+    
     ifelse population = 0 [
       set shape "x"
     ] [
       set shape "circle"
     ]
-    let sizer runresult size-from
-    set size 2 * sizer / (10 + sizer) + .5
+    
     set color 10 * (length genome mod 14) + 5
   ]
-  ask species with [ not hidden? ] [ set label (runresult label-from) ]
-  ask species [ set hidden? enforce-mins? and deadend? ]
-  ask links [
-    set hidden? [ hidden? ] of end1 or [ hidden? ] of end2
-  ]
-  ask convergent-links [
-    set hidden? hidden? or not show-convergence?
-  ]
+  
   if any? active-species [ reposition ]
+  
   ask species with [ hidden? ] [ if any? in-phylo-link-neighbors [ move-to one-of in-phylo-link-neighbors ] ]
+  
   display
 end
 
+to-report compile-from [ from ]
+  ifelse from = "num-leaves" [
+    report "num-leaves"
+  ] [
+    report runresult (word "task [ " from " ]")
+  ]
+end
+
 to reposition
-  set-base-positions xcor-from "x"
-  set-base-positions ycor-from "y"
+  set-base-positions x-task "x"
+  set-base-positions y-task "y"
   let min-x min [ x ] of active-species
   let max-x max [ x ] of active-species
   let x-width max-x - min-x
@@ -75,7 +104,11 @@ to reposition
   ifelse polar? [
     let max-r max-pxcor - 1
     let xs sort remove-duplicates [ x ] of active-species
-    let x-gap mean n-values (length xs - 1) [ (item (? + 1) xs) - (item ? xs) ]
+    let x-gap ifelse-value (length xs > 1) [
+      mean n-values (length xs - 1) [ (item (? + 1) xs) - (item ? xs) ]
+    ] [
+      1
+    ]
     set x-width x-width + x-gap
     ask active-species [
       let angle (x - min-x) / x-width * 359
@@ -84,10 +117,10 @@ to reposition
       go-towards (r * cos angle) (r * sin angle)
     ]
   ] [
-    let px-width max-pxcor - min-pxcor - 1
-    let py-width max-pycor - min-pycor - 1
+    let px-width max-pxcor - min-pxcor - 2
+    let py-width max-pycor - min-pycor - 2
     ask active-species [
-      go-towards ((x - min-x) / x-width * px-width + min-pxcor) ((y - min-y) / y-width * py-width + min-pycor)
+      go-towards ((x - min-x) / x-width * px-width + min-pxcor + 1) ((y - min-y) / y-width * py-width + min-pycor + 1)
     ]
   ]
 end
@@ -96,13 +129,30 @@ to-report active-species
   report species with [ not hidden? ]
 end
 
+to set-visibility
+  ask out-phylo-link-neighbors [ set-visibility ]
+  set hidden? not passes-filters? and all? out-phylo-link-neighbors [ hidden? ]
+end
+
+to-report passes-filters?
+  report (
+    not enforce-mins?
+    or (  reproductions >= min-reproductions
+      and population >= min-population
+      and member? genome-filter genome ))
+end
+
 to set-base-positions [ from var ]
   let set-task runresult (word "task [ set " var " ? ]")
   ifelse from = "num-leaves" [
     ask a-species 0 [ layout-tree set-task 0 1 ]
   ] [
+    let vals [ runresult from ] of active-species
+    let max-val max vals
+    let min-val min vals
+    let width ifelse-value (max-val = min-val) [ 1 ] [ max-val - min-val ]
     ask active-species [
-      (run set-task runresult from)
+      (run set-task (runresult from - min-val) / width)
     ]
   ]
 end
@@ -185,14 +235,11 @@ to-report num-leaves
   ]
 end
 
-to-report deadend?
-  report (reproductions < min-reproductions or population < min-population) and all? out-phylo-link-neighbors [ deadend? ]
-end
 
 to show-genome
   if mouse-down? [
     every .5 [
-      ask min-one-of species with [ not hidden? ] [ distancexy mouse-xcor mouse-ycor ] [
+      ask min-one-of active-species [ distancexy mouse-xcor mouse-ycor ] [
         output-print (word "Species " who)
         output-print (word "Population: " population)
         output-print (word "Reproductions: " reproductions)
@@ -203,6 +250,29 @@ to show-genome
       ]
     ]
   ]
+end
+
+to setup-fake
+  setup
+  ask a-species 0 [ set genome "0000000000" set population 100 ]
+end
+
+to go-fake
+  let parent-id 0
+  let child-genome 0
+  ask one-of species with [ population > 0 ] [
+    set parent-id who
+    set child-genome genome
+    if random-float 1 < .1 [
+      let i random length child-genome
+      set child-genome (word (substring child-genome 0 i) (random 2) (substring child-genome (i + 1) length child-genome))
+    ]
+  ]
+  let foo birth parent-id child-genome
+  ask one-of species with [ population > 0 ] [
+    death who
+  ]
+  go
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
@@ -273,7 +343,7 @@ min-reproductions
 min-reproductions
 0
 20
-3
+0
 1
 1
 NIL
@@ -296,16 +366,16 @@ HORIZONTAL
 
 OUTPUT
 10
-325
+385
 370
 675
 12
 
 BUTTON
-110
-280
-232
-313
+125
+345
+247
+378
 NIL
 show-genome
 T
@@ -325,7 +395,7 @@ CHOOSER
 725
 xcor-from
 xcor-from
-"num-leaves" "depth" "who" "population" "reproductions" "first-appearance" "last-appearance"
+"num-leaves" "depth" "who" "population" "reproductions" "first-appearance" "last-appearance" "length genome"
 0
 
 CHOOSER
@@ -335,7 +405,7 @@ CHOOSER
 215
 ycor-from
 ycor-from
-"num-leaves" "depth" "who" "population" "reproductions" "first-appearance" "last-appearance"
+"num-leaves" "depth" "who" "population" "reproductions" "first-appearance" "last-appearance" "length genome"
 1
 
 CHOOSER
@@ -345,7 +415,7 @@ CHOOSER
 105
 label-from
 label-from
-"\"\"" "population" "reproductions" "first-appearance" "last-appearance"
+"\"\"" "who" "population" "reproductions" "first-appearance" "last-appearance" "length genome"
 0
 
 SWITCH
@@ -386,6 +456,17 @@ NIL
 NIL
 NIL
 1
+
+INPUTBOX
+5
+280
+200
+340
+genome-filter
+NIL
+1
+0
+String
 
 @#$#@#$#@
 ## WHAT IS IT?
