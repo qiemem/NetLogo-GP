@@ -52,6 +52,7 @@ to layout
   
   ask a-species 0 [ set-visibility ]
   ask links [ set hidden? any? both-ends with [ hidden? ] ]
+  ask phylo-links [ set hidden? not show-phylo-links? or hidden? ]
   ask convergent-links [ set hidden? not show-convergence? or hidden? ]
   
   if any? active-species [ set-base-positions size-task "size" ]
@@ -193,6 +194,7 @@ to-report birth [ parent-species-id child-genome ]
         set population 0
         set depth [ depth ] of parent-species + 1
         move-to parent-species
+        set hidden? true
       ]
     ] [
       set child-species one-of child-species
@@ -330,7 +332,7 @@ SWITCH
 273
 show-convergence?
 show-convergence?
-1
+0
 1
 -1000
 
@@ -436,7 +438,7 @@ SWITCH
 98
 smooth-transitions?
 smooth-transitions?
-0
+1
 1
 -1000
 
@@ -460,13 +462,24 @@ NIL
 INPUTBOX
 5
 280
-200
+237
 340
 genome-filter
 NIL
 1
 0
 String
+
+SWITCH
+185
+240
+357
+273
+show-phylo-links?
+show-phylo-links?
+0
+1
+-1000
 
 @#$#@#$#@
 ## WHAT IS IT?
