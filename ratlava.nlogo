@@ -5,7 +5,7 @@ __includes [ "gp.nls" ]
 globals [
   rat-grammar
   last-best
-  
+
   birth
   death
   phylo-go
@@ -23,11 +23,8 @@ to setup
   ca
   if phylogenetic-tree? [
     ls:reset
-    ls:load-gui-model (word ls:model-directory "phylogeny.nlogo")
-    ls:ask 0 "setup"
-    set birth ls:report 0 "task [ birth ?1 ?2 ]"
-    set death ls:report 0 "task [ death ? ]"
-    set phylo-go ls:report 0 "task [ go ]"
+    ls:create-interactive-models 1 "phylogeny.nlogo"
+    ls:ask 0 [ setup ]
   ]
   set rat-grammar [
     [90 [] "angle"]
@@ -46,7 +43,7 @@ to setup
     ;["left-commands" ["commands" "command"] "commands" "transln"]
     ["multi-command-block" ["commands"] "command-block" "blockln"]
   ]
-  
+
   ask n-of (count patches / 3) patches [ set pcolor red ]
   make-rats 100
   reset-ticks
@@ -55,11 +52,11 @@ end
 to go
   ask n-of 5 patches with [ pcolor = red ] [ set pcolor black ]
   ask n-of 5 patches with [ pcolor = black ] [ set pcolor red ]
-  ask turtles [ 
+  ask turtles [
     act
     set age age + 1
     if pcolor = red [
-      (ls:ask 0 death species)
+      (ls:ask 0 [ s -> death s ] species)
       die
     ]
   ]
@@ -71,8 +68,8 @@ to go
     set last-best best
   ]
   if phylogenetic-tree? [
-    ls:ask 0 phylo-go
-    ls:display 0
+    ls:ask 0 [ go ]
+;    ls:display 0
   ]
   tick
 end
@@ -80,16 +77,16 @@ end
 to act
   run proc
   fd 1
-end  
+end
 
 to make-rats [ n ]
   crt n [
     set my-ast gen-for-type rat-grammar "commands" 3
     init-rat
     if phylogenetic-tree? [
-      set species (ls:report 0 "new-species ?" code)
+      set species (ls:report 0 [ c -> new-species c ] code)
     ]
-  ] 
+  ]
 end
 
 to breed-rat
@@ -99,7 +96,7 @@ to breed-rat
     set my-ast mutate rat-grammar parent-ast mutation-rate
     init-rat
     if phylogenetic-tree? [
-      set species (ls:report 0 birth [species] of parent code)
+      set species (ls:report 0 [ [ p c ] -> birth p c ] [species] of parent code)
     ]
   ]
 end
@@ -107,19 +104,18 @@ end
 to init-rat
   move-to one-of patches with [ pcolor = black ]
   set code ast-to-code rat-grammar my-ast
-  set proc compile code
+  set proc compile [] code
   set color 10 * (length code mod 14) + 5
   set heading 0
 end
-    
 @#$#@#$#@
 GRAPHICS-WINDOW
 617
 10
-1056
-470
-16
-16
+1054
+448
+-1
+-1
 13.0
 1
 10
@@ -220,7 +216,7 @@ mutation-rate
 mutation-rate
 0
 1
-0.0050
+0.005
 .005
 1
 NIL
@@ -247,7 +243,7 @@ NIL
 10.0
 true
 false
-"foreach n-values 14 [ ? ] [\n  create-temporary-plot-pen (word ?)\n  set-plot-pen-color ? * 10 + 5\n]" "foreach n-values 14 [ ? ] [\n  set-current-plot-pen (word ?)\n  plot count turtles with [ length code mod 14 = ? ]\n]"
+"foreach range 14 [ i ->\n  create-temporary-plot-pen (word i)\n  set-plot-pen-color i * 10 + 5\n]" "foreach range 14 [ i ->\n  set-current-plot-pen (word i)\n  plot count turtles with [ length code mod 14 = i ]\n]"
 PENS
 
 SWITCH
@@ -636,9 +632,8 @@ false
 0
 Polygon -7500403 true true 270 75 225 30 30 225 75 270
 Polygon -7500403 true true 30 75 75 30 270 225 225 270
-
 @#$#@#$#@
-NetLogo 5.0.5
+NetLogo 6.3.0
 @#$#@#$#@
 @#$#@#$#@
 @#$#@#$#@
@@ -654,7 +649,6 @@ true
 0
 Line -7500403 true 150 150 90 180
 Line -7500403 true 150 150 210 180
-
 @#$#@#$#@
 1
 @#$#@#$#@

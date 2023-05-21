@@ -1,3 +1,5 @@
+extensions [ table ]
+
 globals [ formatters ]
 
 to-report pick-random [ lst ]
@@ -5,7 +7,11 @@ to-report pick-random [ lst ]
 end
 
 to-report join [ str lst ]
-  report reduce [(word ?1 str ?2)] lst
+  ifelse empty? lst [
+    report ""
+  ] [
+    report reduce [[a s ] -> (word a str s)] lst
+  ]
 end
 
 to-report count-substr [ str substr ]
@@ -46,13 +52,13 @@ to-report rule-format [ rule ]
 end
 
 to-report get-rule [ grammar name ]
-  report first filter [ name = rule-name ? ] grammar
+  report first filter [ g -> name = rule-name g ] grammar
 end
 
 to-report gen-for-type [ grammar return-type max-depth ]
-  let candidates filter [ return-type = rule-type ? ] grammar
+  let candidates filter [ g -> return-type = rule-type g ] grammar
   if max-depth <= 0 [
-    let remaining filter [ empty? rule-args ? ] candidates
+    let remaining filter [ c -> empty? rule-args c ] candidates
     if not empty? remaining [
       report rule-name pick-random remaining
     ]
@@ -61,7 +67,7 @@ to-report gen-for-type [ grammar return-type max-depth ]
   ifelse empty? rule-args choice [
     report rule-name choice
   ] [
-    report (sentence rule-name choice (map [ gen-for-type grammar ? (max-depth - 1) ] rule-args choice))
+    report (sentence rule-name choice (map [ c -> gen-for-type grammar c (max-depth - 1) ] rule-args choice))
   ]
 end
 
@@ -73,7 +79,7 @@ to-report mutate [ grammar ast mut-rate ]
   ] [
     ifelse is-list? ast [
       let args but-first ast
-      report fput name map [ mutate grammar ? mut-rate ] args
+      report fput name map [ a -> mutate grammar a mut-rate ] args
     ] [
       report ast
     ]
@@ -86,7 +92,7 @@ end
 
 to-report ast-to-code [ grammar ast ]
   ifelse is-list? ast [
-    let children map [ ast-to-code grammar ? ] ast
+    let children map [ n -> ast-to-code grammar n ] ast
     let rule get-rule grammar first children
     report run-format (rule-format rule) (first children) (but-first children)
   ] [
@@ -98,13 +104,13 @@ to-report prettify [ ugly-code ]
   let lines split ugly-code "\n"
   let result []
   let indent 0
-  foreach lines [
-    let indent-change count-substr ? "[" - count-substr ? "]"
+  foreach lines [ l ->
+    let indent-change count-substr l "[" - count-substr l "]"
     if indent-change < 0 [ set indent indent + indent-change ]
     ifelse indent > 0 [
-      set result lput (word (reduce word n-values indent [ "  " ]) ?) result  
+      set result lput (word (reduce word n-values indent [ "  " ]) l) result  
     ] [
-      set result lput ? result
+      set result lput l result
     ]
     if indent-change > 0 [ set indent indent + indent-change ]
   ]
@@ -120,13 +126,13 @@ to-report get-formatter [ proc-name ]
     set formatters table:make
   ]
   if not table:has-key? formatters proc-name [
-    table:put formatters proc-name compile (word proc-name " ?1 ?2")
+    table:put formatters proc-name compile ["?1" "?2"] (word proc-name " ?1 ?2")
   ]
   report table:get formatters proc-name
 end
 
-to-report compile [ source ]
-  report runresult (word "task [" source "]")
+to-report compile [ args source ]
+  report runresult (word "[ [" (join " " args) "] -> " source " ]")
 end
   
 

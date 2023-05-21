@@ -18,7 +18,7 @@ species-own [
   first-appearance
   last-appearance
   depth
-  
+
   x
   y
 ]
@@ -49,12 +49,12 @@ to layout
   set y-task compile-from ycor-from
   set size-task compile-from size-from
   set label-task compile-from label-from
-  
+
   ask a-species 0 [ set-visibility ]
   ask links [ set hidden? any? both-ends with [ hidden? ] ]
   ask phylo-links [ set hidden? not show-phylo-links? or hidden? ]
   ask convergent-links [ set hidden? not show-convergence? or hidden? ]
-  
+
   if any? active-species [ set-base-positions size-task "size" ]
   ask active-species [
     ifelse passes-filters? [
@@ -64,20 +64,20 @@ to layout
       set size 0
       set label ""
     ]
-    
+
     ifelse population = 0 [
       set shape "x"
     ] [
       set shape "circle"
     ]
-    
+
     set color 10 * (length genome mod 14) + 5
   ]
-  
+
   if any? active-species [ reposition ]
-  
+
   ask species with [ hidden? ] [ if any? in-phylo-link-neighbors [ move-to one-of in-phylo-link-neighbors ] ]
-  
+
   display
 end
 
@@ -85,7 +85,7 @@ to-report compile-from [ from ]
   ifelse from = "num-leaves" [
     report "num-leaves"
   ] [
-    report runresult (word "task [ " from " ]")
+    report runresult (word "[-> " from " ]")
   ]
 end
 
@@ -101,12 +101,12 @@ to reposition
   let y-width max-y - min-y
   if y-width = 0 [ set y-width 1 ]
 
-  
+
   ifelse polar? [
     let max-r max-pxcor - 1
     let xs sort remove-duplicates [ x ] of active-species
     let x-gap ifelse-value (length xs > 1) [
-      mean n-values (length xs - 1) [ (item (? + 1) xs) - (item ? xs) ]
+      mean n-values (length xs - 1) [ ?1 -> (item (?1 + 1) xs) - (item ?1 xs) ]
     ] [
       1
     ]
@@ -114,7 +114,7 @@ to reposition
     ask active-species [
       let angle (x - min-x) / x-width * 359
       let r (y - min-y) / y-width * max-r
-      
+
       go-towards (r * cos angle) (r * sin angle)
     ]
   ] [
@@ -144,7 +144,7 @@ to-report passes-filters?
 end
 
 to set-base-positions [ from var ]
-  let set-task runresult (word "task [ set " var " ? ]")
+  let set-task runresult (word "[? ->  set " var " ? ]")
   ifelse from = "num-leaves" [
     ask a-species 0 [ layout-tree set-task 0 1 ]
   ] [
@@ -200,7 +200,7 @@ to-report birth [ parent-species-id child-genome ]
       set child-species one-of child-species
     ]
     ask child-species [ set population population + 1 ]
-    
+
     ask one-of [ my-in-phylo-links ] of child-species [
       set occurrences occurrences + 1
     ]
@@ -219,8 +219,8 @@ to layout-tree [ set-task min-xcor max-xcor ]
   let total-leaves num-leaves
   let unit-width (max-xcor - min-xcor) / total-leaves
   let child-min-xcor min-xcor
-  foreach sort out-phylo-link-neighbors with [ not hidden? ] [
-    ask ? [
+  foreach sort out-phylo-link-neighbors with [ not hidden? ] [ ?1 ->
+    ask ?1 [
       let child-max-xcor child-min-xcor + unit-width * num-leaves
       layout-tree set-task child-min-xcor child-max-xcor
       set child-min-xcor child-max-xcor
@@ -280,10 +280,10 @@ end
 GRAPHICS-WINDOW
 380
 10
-1025
-676
-16
-16
+1023
+654
+-1
+-1
 19.242424242424242
 1
 10
@@ -345,7 +345,7 @@ min-reproductions
 min-reproductions
 0
 20
-0
+0.0
 1
 1
 NIL
@@ -360,7 +360,7 @@ min-population
 min-population
 0
 20
-0
+0.0
 1
 1
 NIL
@@ -822,9 +822,8 @@ false
 0
 Polygon -7500403 true true 270 75 225 30 30 225 75 270
 Polygon -7500403 true true 30 75 75 30 270 225 225 270
-
 @#$#@#$#@
-NetLogo 5.0.5
+NetLogo 6.3.0
 @#$#@#$#@
 @#$#@#$#@
 @#$#@#$#@
@@ -851,7 +850,6 @@ true
 0
 Line -7500403 true 150 150 90 180
 Line -7500403 true 150 150 210 180
-
 @#$#@#$#@
 1
 @#$#@#$#@

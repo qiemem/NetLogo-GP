@@ -27,68 +27,68 @@ to setup
     ["multi-commands" ["command" "commands"] "commands" "transln"]
     ["multi-command-block" ["commands"] "command-block" "blockln"]
     ["if" ["bool" "command-block"] "commands"]
-    
+
     [30 [] "angle"]
     [45 [] "angle"]
     [90 [] "angle"]
     ["random" ["angle"] "angle"]
     ["left" ["angle"] "command"]
     ["right" ["angle"] "command"]
-    
+
     ["walk" [] "command"]
     ["sprint" [] "command"]
-    
+
     ["reproduce" [] "command"]
-    
+
     ["energy" [] "number"]
     [100 [] "number"]
     [50 [] "number"]
     [150 [] "number"]
     ["<" ["number" "number"] "bool" "infix"]
-    
+
     [1 [] "distance"]
     [2 [] "distance"]
-    
+
     ["patch-here" [] "patch"]
     ["patch-ahead" ["distance"] "patch"]
     ["patch-left-and-ahead" ["angle" "distance"] "patch"]
     ["patch-right-and-ahead" ["angle" "distance"] "patch"]
   ]
-  
+
   set sheep-grammar (sentence base-grammar [
     ["eat-grass" [] "command"]
     ["can-eat-patch?" ["patch"] "bool"]
     ["wolves-present?" ["patch"] "bool"]
   ])
-  
+
   let repro-seed [
     "if" ["<" 100 "energy"] [ "multi-command-block"
       ["single-command" "reproduce"]
     ]
   ]
-  
+
   set grass-color 63
   set dirt-color 32
-  
+
   set-default-shape sheep "sheep"
   set-default-shape wolves "wolf"
-  
+
   create-sheep 100 [
     setxy random-xcor random-ycor
     set energy 50
     set genome gen-for-type sheep-grammar "commands" 0
     set genome (list "multi-commands" repro-seed genome)
     set code ast-to-code sheep-grammar genome
-    set proc compile code
+    set proc compile [] code
     recolor
   ]
-  
+
   create-wolves 20 [
     setxy random-xcor random-ycor
     set color gray
     set size 1.5
   ]
-  
+
   ask patches [ set pcolor dirt-color ]
   ask patches with [ random-float 1 < .5 ] [ set pcolor grass-color ]
   reset-ticks
@@ -104,7 +104,7 @@ to go
   if count wolves > num-wolves [
     ask n-of (count wolves - num-wolves) wolves [ die ]
   ]
-  
+
   if count wolves < num-wolves [
     create-wolves num-wolves - count wolves [
       setxy random-xcor random-ycor
@@ -112,7 +112,7 @@ to go
       set size 1.5
     ]
   ]
-      
+
   ask wolves [
     face min-one-of sheep [ distance myself ]
     rt random 60
@@ -130,7 +130,7 @@ to recolor
 end
 
 to-report code-color [ source ]
-  report hsb (length source mod 255) 255 255
+  report __hsb-old (length source mod 255) 255 255
 end
 
 to-report can-eat-patch? [ p ]
@@ -171,21 +171,20 @@ to reproduce
     hatch 1 [
       set genome mutate sheep-grammar [ genome ] of myself 0.01
       set code ast-to-code sheep-grammar genome
-      set proc compile code
+      set proc compile [] code
       set heading random 360
       recolor
     ]
   ]
 end
-  
 @#$#@#$#@
 GRAPHICS-WINDOW
 210
 10
-649
-470
-16
-16
+647
+448
+-1
+-1
 13.0
 1
 10
@@ -272,7 +271,7 @@ NIL
 10.0
 true
 false
-"foreach n-values 255 [ ? ] [\n  create-temporary-plot-pen (word ?)\n  set-plot-pen-color (approximate-hsb ? 255 255)\n]" "foreach n-values 255 [ ? ] [\n  set-current-plot-pen (word ?)\n  plot count sheep with [ length code mod 255 = ? ]\n]"
+"foreach range 256 [ i ->\n  create-temporary-plot-pen (word i)\n  set-plot-pen-color (approximate-hsb i 255 255)\n]" "foreach range 256 [ i ->\n  set-current-plot-pen (word i)\n  plot count sheep with [ length code mod 255 = i ]\n]"
 PENS
 
 SLIDER
@@ -284,7 +283,7 @@ num-wolves
 num-wolves
 0
 50
-10
+10.0
 1
 1
 NIL
@@ -631,9 +630,8 @@ false
 0
 Polygon -7500403 true true 270 75 225 30 30 225 75 270
 Polygon -7500403 true true 30 75 75 30 270 225 225 270
-
 @#$#@#$#@
-NetLogo 5.0.5
+NetLogo 6.3.0
 @#$#@#$#@
 @#$#@#$#@
 @#$#@#$#@
@@ -649,7 +647,6 @@ true
 0
 Line -7500403 true 150 150 90 180
 Line -7500403 true 150 150 210 180
-
 @#$#@#$#@
 0
 @#$#@#$#@
